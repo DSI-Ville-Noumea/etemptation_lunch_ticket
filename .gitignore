@@ -1,0 +1,9 @@
+# vim
+.swp
+
+# vscode
+.code 
+
+# python
+.pyc
+__pycache__
