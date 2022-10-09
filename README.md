@@ -38,11 +38,24 @@ sudo apt-get install chromium-chromedriver
 The driver may be installed in the local environment (.venv). This is done by the script. 
 You just have to define the browser in the configuration file `settings.json`: 
 
+#### Chromium
+```json
+{
+    "browser": "chrome"
+}
+```
+
+#### Firefox
 ```json
 {
     "browser": "firefox"
 }
 ```
+
+#### Other Browser
+
+TODO
+
 
 ## Usage
 
