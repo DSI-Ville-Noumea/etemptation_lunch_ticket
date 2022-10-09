@@ -4,68 +4,99 @@
 
 
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 import time
+import json
 import os
 
 _config_filename = 'settings.json'
 
-_website = "https://etemptation.XXXXXXXXXX/
-
-_username = 'XXXXX'
-_password = 'YYYYYYY'
-
 DRIVER_PATH =  '/usr/bin/chromedriver'
 prefs = {"CapabilityType.ACCEPT_SSL_CERTS" : "true"}
 
+def get_driver(driver="chrome"):
+
+    match driver:
+        case "firefox":
+            options = FirefoxOptions()
+            #options.headless = True
+            options.add_argument("--window-size=1920,1200")
+            options.add_argument('ignore-certificate-errors')
+            service = FirefoxService(executable_path=GeckoDriverManager().install())
+            browser = webdriver.Firefox(options=options, service=service)
+        case "chrome":
+            options = ChromeOptions()
+            #options.headless = True
+            options.add_argument("--window-size=1920,1200")
+            options.add_argument('ignore-certificate-errors')
+            service = ChromeService(executable_path=ChromeDriverManager().install())
+            browser = webdriver.Chrome(options=options, service=service)
+        case _:
+            browser = None
+
+    return browser
+
 if __name__ == '__main__':
 
-    options = Options()
-    #options.headless = True
-    options.add_argument("--window-size=1920,1200")
-    options.add_argument('ignore-certificate-errors')
+    # Get configuration from json file
+    config = json.loads(open(_config_filename).read())
 
-    driver = webdriver.Chrome(options=options, service=Service(ChromeDriverManager().install()))
-    driver.get(_website)
+    if "browser" in config.keys() :
+        browser = get_driver(driver=config["browser"])
+    else:
+        print("ERROR: You have to define a browser in the settings.json file")
+        os.exit(1)
 
-    #print(driver.page_source)
+    if "website_url" in config.keys():
+        browser.get(config["website_url"])
+    else:
+        print("ERROR: You have to define website_url in settings.json file")
+        os.exit(1)
+
     print("Etemptation Authentication")
-    username = driver.find_element(By.ID, "USERID").send_keys(_username)
-    password = driver.find_element(By.ID, "XXX_PASSWORD").send_keys(_password)
-    submit = driver.find_element(By.ID, "connect").click()
+    if "username" in config.keys() and "password" in config.keys():
+        username = browser.find_element(By.ID, "USERID").send_keys(config["username"])
+        password = browser.find_element(By.ID, "XXX_PASSWORD").send_keys(config["password"])
+        submit = browser.find_element(By.ID, "connect").click()
+    else:
+        print("ERROR: You have to define username and password in settings.json file")
+        os.exit(1)
 
     try:
-        logout_button = driver.find_element(By.ID, "disconnect")
+        logout_button = browser.find_element(By.ID, "disconnect")
         print("Successfully logged in to Etemptation")
     except:
         print("Incorrect login/password")
 
     print("Make a declaration for lunch ticket")
-    menu = driver.find_element(By.LINK_TEXT, 'Self service').click()
+    menu = browser.find_element(By.LINK_TEXT, 'Self service').click()
     time.sleep(1)
-    ticket_repas = driver.find_element(By.PARTIAL_LINK_TEXT, "Demande de Titre Repas").click()
+    ticket_repas = browser.find_element(By.PARTIAL_LINK_TEXT, "Demande de Titre Repas").click()
     time.sleep(1)
-    bouton_demande = driver.find_element(By.XPATH, "//input[@value='Nouvelle demande']").click()
+    bouton_demande = browser.find_element(By.XPATH, "//input[@value='Nouvelle demande']").click()
     time.sleep(1)
 
-    form_motif = driver.find_element(By.ID, "for/MOTIF").send_keys("ZTCKREST")
+    form_motif = browser.find_element(By.ID, "for/MOTIF").send_keys("ZTCKREST")
     
-    form_nombre = driver.find_element(By.ID, "VALDEB_N_label").click()
-    form_valeur = driver.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
+    form_nombre = browser.find_element(By.ID, "VALDEB_N_label").click()
+    form_valeur = browser.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
     time.sleep(1)
 
 
-    bouton_valider = driver.find_element(By.ID, "_MODAL_BTNA").click()
-    time.sleep(2)
+    bouton_valider = browser.find_element(By.ID, "_MODAL_BTNA").click()
+    time.sleep(1)
 
     validation_message = "Votre déclaration a été prise en compte"
     error_message = "Solde insuffisant pour ce motif"
     error = False
 
-    validation = driver.find_element(By.ID, "modale_content")
+    validation = browser.find_element(By.ID, "modale_content")
     if validation_message in validation.text:
         print("Successfully declared")
     else:
@@ -74,7 +105,7 @@ if __name__ == '__main__':
             error = True
 
     try:
-        validation = driver.find_element(By.ID, "modale_content")
+        validation = browser.find_element(By.ID, "modale_content")
         if validation_message in validation.text:
             print("Successfully declared")
         else:
@@ -85,15 +116,15 @@ if __name__ == '__main__':
         print("Couldn't ask for lunch ticket")
 
     print("Closing message pop up")
-    logout_button = driver.find_element(By.ID, "_MODALMSG_BTNA").click()
+    logout_button = browser.find_element(By.ID, "_MODALMSG_BTNA").click()
 
     if error:
         print('Closing declaration pop up: Canceling')
-        logout_button = driver.find_element(By.ID, "_MODAL_BTNB").click()
+        logout_button = browser.find_element(By.ID, "_MODAL_BTNB").click()
 
 
     print("Logout")
-    logout_button = driver.find_element(By.ID, "disconnect").click()
+    logout_button = browser.find_element(By.ID, "disconnect").click()
     print("done")
 
-    driver.quit()
+    browser.quit()
