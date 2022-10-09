@@ -15,24 +15,21 @@ import time
 import json
 import os
 
-_config_filename = 'settings.json'
-
-DRIVER_PATH =  '/usr/bin/chromedriver'
-prefs = {"CapabilityType.ACCEPT_SSL_CERTS" : "true"}
+_config_filename = 'settings.json'  
 
 def get_driver(driver="chrome"):
 
     match driver:
         case "firefox":
             options = FirefoxOptions()
-            #options.headless = True
+            options.headless = True
             options.add_argument("--window-size=1920,1200")
             options.add_argument('ignore-certificate-errors')
             service = FirefoxService(executable_path=GeckoDriverManager().install())
             browser = webdriver.Firefox(options=options, service=service)
         case "chrome":
             options = ChromeOptions()
-            #options.headless = True
+            options.headless = True
             options.add_argument("--window-size=1920,1200")
             options.add_argument('ignore-certificate-errors')
             service = ChromeService(executable_path=ChromeDriverManager().install())
