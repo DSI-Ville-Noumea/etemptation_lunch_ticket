@@ -3,125 +3,103 @@
 # ref :  https://www.scrapingbee.com/blog/selenium-python/
 
 
+import os
+import time
+
 from selenium import webdriver
+from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.firefox.service import Service as FirefoxService
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.firefox import GeckoDriverManager
-import time
-import json
-import os
 
-_config_filename = 'settings.json'  
 
-def get_driver(driver="chrome"):
+def get_driver():
+    options = ChromeOptions()
+    options.add_argument("--headless=new")  # Modern headless flag
+    options.add_argument("--window-size=1920,1200")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    # Helpful for avoiding bot detection in some environments
+    options.add_argument("--disable-blink-features=AutomationControlled")
 
-    match driver:
-        case "firefox":
-            options = FirefoxOptions()
-            options.headless = True
-            options.add_argument("--window-size=1920,1200")
-            options.add_argument('ignore-certificate-errors')
-            service = FirefoxService(executable_path=GeckoDriverManager().install())
-            browser = webdriver.Firefox(options=options, service=service)
-        case "chrome":
-            options = ChromeOptions()
-            options.headless = True
-            options.add_argument("--window-size=1920,1200")
-            options.add_argument('ignore-certificate-errors')
-            service = ChromeService(executable_path=ChromeDriverManager().install())
-            browser = webdriver.Chrome(options=options, service=service)
-        case _:
-            browser = None
+    service = ChromeService(ChromeDriverManager().install())
+    return webdriver.Chrome(service=service, options=options)
 
-    return browser
 
-if __name__ == '__main__':
+def run_declaration():
+    # Load Config from Environment Variables
+    # Use .get() to provide a fallback or None
+    config = {
+        "website_url": os.getenv("WEBSITE_URL", "https://etemptation.ville-noumea.nc"),
+        "username":    os.getenv("USERNAME"),
+        "password":    os.getenv("PASSWORD"),
+        "browser":     os.getenv("BROWSER", "chrome") # Default to chrome
+    }
 
-    # Get configuration from json file
-    config = json.loads(open(_config_filename).read())
+    # Validation: Ensure required variables are present
+    required_keys = ["username", "password"]
+    for key in required_keys:
+        if not config[key]:
+            print(f"ERROR: Environment variable {key.upper()} is not set.")
+            exit(1)
 
-    if "browser" in config.keys() :
-        browser = get_driver(driver=config["browser"])
-    else:
-        print("ERROR: You have to define a browser in the settings.json file")
-        os.exit(1)
-
-    if "website_url" in config.keys():
-        browser.get(config["website_url"])
-    else:
-        print("ERROR: You have to define website_url in settings.json file")
-        os.exit(1)
-
-    print("Etemptation Authentication")
-    if "username" in config.keys() and "password" in config.keys():
-        username = browser.find_element(By.ID, "USERID").send_keys(config["username"])
-        password = browser.find_element(By.ID, "XXX_PASSWORD").send_keys(config["password"])
-        submit = browser.find_element(By.ID, "connect").click()
-    else:
-        print("ERROR: You have to define username and password in settings.json file")
-        os.exit(1)
+    browser = get_driver()
+    wait = WebDriverWait(browser, 10)
 
     try:
-        logout_button = browser.find_element(By.ID, "disconnect")
-        print("Successfully logged in to Etemptation")
-    except:
-        print("Incorrect login/password")
+        # Navigation
+        browser.get(config['website_url'])
 
-    print("Make a declaration for lunch ticket")
-    menu = browser.find_element(By.LINK_TEXT, 'Self service').click()
-    time.sleep(1)
-    ticket_repas = browser.find_element(By.PARTIAL_LINK_TEXT, "Demande de Titre Repas").click()
-    time.sleep(1)
-    bouton_demande = browser.find_element(By.XPATH, "//input[@value='Nouvelle demande']").click()
-    time.sleep(1)
+        # Login
+        wait.until(EC.presence_of_element_located((By.ID, "usernameLogin"))).send_keys(config["username"])
+        browser.find_element(By.ID, "passwordLogin").send_keys(config["password"])
+        browser.find_element(By.ID, "connectBtn").click()
 
-    form_motif = browser.find_element(By.ID, "for/MOTIF").send_keys("ZTCKREST")
-    
-    form_nombre = browser.find_element(By.ID, "VALDEB_N_label").click()
-    form_valeur = browser.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
-    time.sleep(1)
+        time.sleep(1)
+        disconnect = browser.find_element(By.ID, "disconnect")
+        print("Successfully logged in.")
 
+        # Navigate to Lunch Tickets
+        wait.until(EC.element_to_be_clickable((By.LINK_TEXT, 'Self service'))).click()
+        wait.until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, "Demande de Titre Repas"))).click()
+        wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Nouvelle demande']"))).click()
 
-    bouton_valider = browser.find_element(By.ID, "_MODAL_BTNA").click()
-    time.sleep(1)
+        # Fill Form
+        wait.until(EC.presence_of_element_located((By.ID, "for/MOTIF"))).send_keys("ZTCKREST",Keys.RETURN)
+        # browser.find_element(By.ID, "VALDEB_N_label").click()
+        # browser.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
+        browser.find_element(By.ID, "_MODAL_BTNA").click()
 
-    validation_message = "Votre déclaration a été prise en compte"
-    error_message = "Solde insuffisant pour ce motif"
-    error = False
+        # Validation Logic
+        modal = wait.until(EC.visibility_of_element_located((By.ID, "modale_content")))
+        content = modal.text
+        error = False
 
-    validation = browser.find_element(By.ID, "modale_content")
-    if validation_message in validation.text:
-        print("Successfully declared")
-    else:
-        if error_message in validation.text:
-            print("Couldn't declare: ", error_message)
+        if "Votre déclaration a été prise en compte" in content:
+            print("Success: Declaration submitted.")
+        elif "Solde insuffisant" in content:
+            print(f"Error: {content}.")
             error = True
 
-    try:
-        validation = browser.find_element(By.ID, "modale_content")
-        if validation_message in validation.text:
-            print("Successfully declared")
-        else:
-            if error_message in validation.text:
-                print("Couldn't declare: ", error_message)
-                error = True
-    except:
-        print("Couldn't ask for lunch ticket")
+        browser.find_element(By.ID, "_MODALMSG_BTNA").click()  # Cancel
+        if error:
+            wait.until(EC.element_to_be_clickable((By.ID, "_MODAL_BTNB"))).click()
 
-    print("Closing message pop up")
-    logout_button = browser.find_element(By.ID, "_MODALMSG_BTNA").click()
+        time.sleep(0.5)
+        disconnect.click()
+        print("Done.")
 
-    if error:
-        print('Closing declaration pop up: Canceling')
-        logout_button = browser.find_element(By.ID, "_MODAL_BTNB").click()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        # Take a screenshot for debugging if it fails
+        browser.save_screenshot("error_debug.png")
+    finally:
+        browser.quit()
 
 
-    print("Logout")
-    logout_button = browser.find_element(By.ID, "disconnect").click()
-    print("done")
-
-    browser.quit()
+if __name__ == '__main__':
+    run_declaration()
