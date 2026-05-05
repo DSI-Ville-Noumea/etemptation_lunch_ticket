@@ -4,6 +4,7 @@
 
 
 import os
+import sys
 import time
 
 from selenium import webdriver
@@ -72,7 +73,7 @@ def run_declaration():
         wait.until(EC.presence_of_element_located((By.ID, "for/MOTIF"))).send_keys("ZTCKREST",Keys.RETURN)
         # browser.find_element(By.ID, "VALDEB_N_label").click()
         # browser.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
-        browser.find_element(By.ID, "_MODAL_BTNA").click()
+        browser.find_element(By.ID, "_MODAL_BTNA").click() # Submit
 
         # Validation Logic
         modal = wait.until(EC.visibility_of_element_located((By.ID, "modale_content")))
@@ -85,13 +86,16 @@ def run_declaration():
             print(f"Error: {content}.")
             error = True
 
-        browser.find_element(By.ID, "_MODALMSG_BTNA").click()  # Cancel
+        browser.find_element(By.ID, "_MODALMSG_BTNA").click()  # Close modal pop-up
         if error:
-            wait.until(EC.element_to_be_clickable((By.ID, "_MODAL_BTNB"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "_MODAL_BTNB"))).click() # Close Demande form if error to disconnect
 
         time.sleep(0.5)
         disconnect.click()
-        print("Done.")
+        print("Disconnected.")
+        if error:
+            # exit code in case of error
+            sys.exit(1)
 
     except Exception as e:
         print(f"An error occurred: {e}")
