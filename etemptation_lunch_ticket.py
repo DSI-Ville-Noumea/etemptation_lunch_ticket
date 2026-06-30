@@ -7,8 +7,9 @@ import os
 import sys
 import time
 
+from datetime import datetime
+
 from selenium import webdriver
-from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -35,7 +36,7 @@ def run_declaration():
     # Load Config from Environment Variables
     # Use .get() to provide a fallback or None
     config = {
-        "website_url": os.getenv("WEBSITE_URL", "https://etemptation.ville-noumea.nc"),
+        "website_url": os.getenv("WEBSITE_URL", "https://etemptation-qual.ville-noumea.nc"),
         "username":    os.getenv("USERNAME"),
         "password":    os.getenv("PASSWORD"),
         "browser":     os.getenv("BROWSER", "chrome") # Default to chrome
@@ -61,36 +62,43 @@ def run_declaration():
         browser.find_element(By.ID, "connectBtn").click()
 
         time.sleep(1)
-        disconnect = browser.find_element(By.ID, "disconnect")
+        disconnect = browser.find_element(By.XPATH, '//*[@id="header"]/div[2]/div[1]/button/span')
         print("Successfully logged in.")
 
         # Navigate to Lunch Tickets
-        wait.until(EC.element_to_be_clickable((By.LINK_TEXT, 'Self service'))).click()
-        wait.until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, "Demande de Titre Repas"))).click()
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Nouvelle demande']"))).click()
+        wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="page-dashboard"]/div/div[3]/div/div[3]/div[1]/a'))).click()
+        wait.until(EC.element_to_be_clickable((By.LINK_TEXT, 'Titre Repas'))).click()
+        wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="rf-itempanel-counters"]/div/div[1]/div/div/div/div/div/div/div/span'))).click()
+
 
         # Fill Form
-        wait.until(EC.presence_of_element_located((By.ID, "for/MOTIF"))).send_keys("ZTCKREST",Keys.RETURN)
-        # browser.find_element(By.ID, "VALDEB_N_label").click()
-        # browser.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
-        browser.find_element(By.ID, "_MODAL_BTNA").click() # Submit
-
-        # Validation Logic
-        modal = wait.until(EC.visibility_of_element_located((By.ID, "modale_content")))
-        content = modal.text
-        error = False
-
-        if "Votre déclaration a été prise en compte" in content:
-            print("Success: Declaration submitted.")
-        elif "Solde insuffisant" in content:
-            print(f"Error: {content}.")
-            error = True
-
-        browser.find_element(By.ID, "_MODALMSG_BTNA").click()  # Close modal pop-up
-        if error:
-            wait.until(EC.element_to_be_clickable((By.ID, "_MODAL_BTNB"))).click() # Close Demande form if error to disconnect
+        browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[3]/div[1]/div[2]/div[1]/div/input').send_keys(datetime.today().strftime("%d/%m/%Y"))
+        browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[6]/div[2]/button').click()
 
         time.sleep(0.5)
+        alert_message = None
+        validation_message = None
+        error = False
+
+        try:
+            validation_message = browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div[2]/div/div/div/div[1]/span').text
+        except Exception as e:
+            print(f"Error: {e}.")
+            error = True
+
+        try:
+            alert_message = browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[2]/div/div[2]/div[2]').text
+        except Exception as e:
+            print(f"Error: {e}.")
+            error = True
+
+        if validation_message:
+            print("Success: Declaration submitted.")
+        elif alert_message:
+            print("Error: Solde insuffisant.")
+        else:
+            print("Erreur inconnue")
+
         disconnect.click()
         print("Disconnected.")
         if error:
