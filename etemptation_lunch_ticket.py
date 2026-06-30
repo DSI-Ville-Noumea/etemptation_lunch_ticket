@@ -36,7 +36,7 @@ def run_declaration():
     # Load Config from Environment Variables
     # Use .get() to provide a fallback or None
     config = {
-        "website_url": os.getenv("WEBSITE_URL", "https://etemptation-qual.ville-noumea.nc"),
+        "website_url": os.getenv("WEBSITE_URL", "https://etemptation.ville-noumea.nc"),
         "username":    os.getenv("USERNAME"),
         "password":    os.getenv("PASSWORD"),
         "browser":     os.getenv("BROWSER", "chrome") # Default to chrome
