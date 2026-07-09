@@ -1,5 +1,5 @@
 services:
-  etemptation:
+  etemptation_lauch_ticket:
     build: .
     image: harbor.ville-noumea.nc/infra/etemptation_lunch_ticket
     container_name: etemptation_lunch_ticket
