@@ -38,3 +38,15 @@ docker run --rm -e USERNAME="USER" -e PASSWORD="PASS" harbor.ville-noumea.nc/inf
 # launch the script
 docker run --rm -e USERNAME="USER" -e PASSWORD="PASS" -e WEBSITE_URL="https://etemptation-qual.ville-noumea.nc" harbor.ville-noumea.nc/infra/etemptation_lunch_ticket
 ```
+
+## Docker Compose
+
+The script is one-shot: it logs in, declares the lunch ticket, then exits. Use
+`docker compose run` (not `up -d`) to launch it.
+
+```bash
+cp .env.example .env
+# edit .env and set USERNAME, PASSWORD, and WEBSITE_URL (prod or qualif)
+
+docker compose run --rm etemptation
+```
