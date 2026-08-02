@@ -58,38 +58,41 @@ def run_declaration():
 
         # Login
         wait.until(EC.presence_of_element_located((By.ID, "usernameLogin"))).send_keys(config["username"])
-        browser.find_element(By.ID, "passwordLogin").send_keys(config["password"])
-        browser.find_element(By.ID, "connectBtn").click()
+        wait.until(EC.presence_of_element_located((By.ID, "passwordLogin"))).send_keys(config["password"])
+        wait.until(EC.presence_of_element_located((By.ID, "connectBtn"))).click()
 
         time.sleep(1)
-        disconnect = browser.find_element(By.XPATH, '//*[@id="header"]/div[2]/div[1]/button/span')
+        disconnect = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="header"]/div[2]/div[1]/button/span')))
         print("Successfully logged in.")
 
         # Navigate to Lunch Tickets
         wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="page-dashboard"]/div/div[3]/div/div[3]/div[1]/a'))).click()
-        wait.until(EC.element_to_be_clickable((By.LINK_TEXT, 'Titre Repas'))).click()
+        wait.until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, 'Titre '))).click()
         wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="rf-itempanel-counters"]/div/div[1]/div/div/div/div/div/div/div/span'))).click()
-
 
         # Fill Form
         browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[3]/div[1]/div[2]/div[1]/div/input').send_keys(datetime.today().strftime("%d/%m/%Y"))
         browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[6]/div[2]/button').click()
 
-        time.sleep(0.5)
+        time.sleep(2)
         alert_message = None
         validation_message = None
         error = False
 
         try:
-            validation_message = browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div[2]/div/div/div/div[1]/span').text
+            elements = browser.find_elements(By.XPATH, '/html/body/div[1]/div[2]/div/div/div/div[1]/span')
+            if elements and elements[0].is_displayed():
+                validation_message = elements[0].text
         except Exception as e:
-            print(f"Error: {e}.")
+            print(f"Error validation: {e}.")
             error = True
 
         try:
-            alert_message = browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[2]/div/div[2]/div[2]').text
+            elements = browser.find_elements(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[2]/div/div[2]/div[2]')
+            if elements and elements[0].is_displayed():
+                alert_message = elements[0].text
         except Exception as e:
-            print(f"Error: {e}.")
+            print(f"Error alert: {e}.")
             error = True
 
         if validation_message:
@@ -101,9 +104,6 @@ def run_declaration():
 
         disconnect.click()
         print("Disconnected.")
-        if error:
-            # exit code in case of error
-            sys.exit(1)
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -111,6 +111,9 @@ def run_declaration():
         browser.save_screenshot("error_debug.png")
     finally:
         browser.quit()
+        if error:
+            # exit code in case of error
+            sys.exit(1)
 
 
 if __name__ == '__main__':
