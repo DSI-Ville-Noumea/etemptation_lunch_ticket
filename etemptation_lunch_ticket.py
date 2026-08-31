@@ -79,21 +79,32 @@ def run_declaration():
         validation_message = None
         error = False
 
-        try:
-            elements = browser.find_elements(By.XPATH, '/html/body/div[1]/div[2]/div/div/div/div[1]/span')
-            if elements and elements[0].is_displayed():
-                validation_message = elements[0].text
-        except Exception as e:
-            print(f"Error validation: {e}.")
-            error = True
+        VAL_XPATH = '/html/body/div[1]/div[2]/div/div/div/div[1]/span'
+        ALERT_XPATH = '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[2]/div/div[2]/div[2]'
 
-        try:
-            elements = browser.find_elements(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[2]/div/div[2]/div[2]')
-            if elements and elements[0].is_displayed():
-                alert_message = elements[0].text
-        except Exception as e:
-            print(f"Error alert: {e}.")
-            error = True
+        # 3. Dynamic Polling Loop (Replaces hardcoded time.sleep)
+        max_wait = 5  # seconds
+        poll_interval = 0.2  # seconds
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait:
+            # Check validation element
+            val_els = browser.find_elements(By.XPATH, VAL_XPATH)
+            if val_els and val_els[0].is_displayed():
+                text = val_els[0].text.strip()
+                if text:  # Ensure text content is actually populated
+                    validation_message = text
+                    break
+
+            # Check alert element
+            alert_els = browser.find_elements(By.XPATH, ALERT_XPATH)
+            if alert_els and alert_els[0].is_displayed():
+                text = alert_els[0].text.strip()
+                if text:  # Ensure text content is actually populated
+                    alert_message = text
+                    break
+
+            time.sleep(poll_interval)
 
         if validation_message:
             print("Success: Declaration submitted.")
