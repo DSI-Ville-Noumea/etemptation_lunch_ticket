@@ -7,8 +7,9 @@ import os
 import sys
 import time
 
+from datetime import datetime
+
 from selenium import webdriver
-from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -57,45 +58,63 @@ def run_declaration():
 
         # Login
         wait.until(EC.presence_of_element_located((By.ID, "usernameLogin"))).send_keys(config["username"])
-        browser.find_element(By.ID, "passwordLogin").send_keys(config["password"])
-        browser.find_element(By.ID, "connectBtn").click()
+        wait.until(EC.presence_of_element_located((By.ID, "passwordLogin"))).send_keys(config["password"])
+        wait.until(EC.presence_of_element_located((By.ID, "connectBtn"))).click()
 
         time.sleep(1)
-        disconnect = browser.find_element(By.ID, "disconnect")
+        disconnect = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="header"]/div[2]/div[1]/button/span')))
         print("Successfully logged in.")
 
         # Navigate to Lunch Tickets
-        wait.until(EC.element_to_be_clickable((By.LINK_TEXT, 'Self service'))).click()
-        wait.until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, "Demande de Titre Repas"))).click()
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Nouvelle demande']"))).click()
+        wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="page-dashboard"]/div/div[3]/div/div[3]/div[1]/a'))).click()
+        wait.until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, 'Titre '))).click()
+        wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="rf-itempanel-counters"]/div/div[1]/div/div/div/div/div/div/div/span'))).click()
 
         # Fill Form
-        wait.until(EC.presence_of_element_located((By.ID, "for/MOTIF"))).send_keys("ZTCKREST",Keys.RETURN)
-        # browser.find_element(By.ID, "VALDEB_N_label").click()
-        # browser.find_element(By.ID, "for/MOTIDUR").send_keys("1.00")
-        browser.find_element(By.ID, "_MODAL_BTNA").click() # Submit
+        browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[3]/div[1]/div[2]/div[1]/div/input').send_keys(datetime.today().strftime("%d/%m/%Y"))
+        browser.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[6]/div[2]/button').click()
 
-        # Validation Logic
-        modal = wait.until(EC.visibility_of_element_located((By.ID, "modale_content")))
-        content = modal.text
+        time.sleep(2)
+        alert_message = None
+        validation_message = None
         error = False
 
-        if "Votre déclaration a été prise en compte" in content:
+        VAL_XPATH = '/html/body/div[1]/div[2]/div/div/div/div[1]/span'
+        ALERT_XPATH = '/html/body/div[1]/div[3]/div/main/div/div[1]/div[1]/div[2]/div/div[2]/form/div[2]/div/div[2]/div[2]'
+
+        # 3. Dynamic Polling Loop (Replaces hardcoded time.sleep)
+        max_wait = 5  # seconds
+        poll_interval = 0.2  # seconds
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait:
+            # Check validation element
+            val_els = browser.find_elements(By.XPATH, VAL_XPATH)
+            if val_els and val_els[0].is_displayed():
+                text = val_els[0].text.strip()
+                if text:  # Ensure text content is actually populated
+                    validation_message = text
+                    break
+
+            # Check alert element
+            alert_els = browser.find_elements(By.XPATH, ALERT_XPATH)
+            if alert_els and alert_els[0].is_displayed():
+                text = alert_els[0].text.strip()
+                if text:  # Ensure text content is actually populated
+                    alert_message = text
+                    break
+
+            time.sleep(poll_interval)
+
+        if validation_message:
             print("Success: Declaration submitted.")
-        elif "Solde insuffisant" in content:
-            print(f"Error: {content}.")
-            error = True
+        elif alert_message:
+            print("Error: Solde insuffisant.")
+        else:
+            print("Erreur inconnue")
 
-        browser.find_element(By.ID, "_MODALMSG_BTNA").click()  # Close modal pop-up
-        if error:
-            wait.until(EC.element_to_be_clickable((By.ID, "_MODAL_BTNB"))).click() # Close Demande form if error to disconnect
-
-        time.sleep(0.5)
         disconnect.click()
         print("Disconnected.")
-        if error:
-            # exit code in case of error
-            sys.exit(1)
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -103,6 +122,9 @@ def run_declaration():
         browser.save_screenshot("error_debug.png")
     finally:
         browser.quit()
+        if error:
+            # exit code in case of error
+            sys.exit(1)
 
 
 if __name__ == '__main__':
