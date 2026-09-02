@@ -18,17 +18,23 @@ You have to install docker locally to run the image.
 git clone 
 cd etemptation_lunch_ticket
 
-docker build -t etemptation_lunch_ticket .
+docker build -t harbor.ville-noumea.nc/infra/etemptation_lunch_ticket .
+```
+
+### Push the image on harbor
+```bash
+docker login -u USER harbor.ville-noumea.nc
+docker push harbor.ville-noumea.nc/infra/etemptation_lunch_ticket
 ```
 
 ### Execute on production 
 ```bash
 # launch the script
-docker run --rm -e USERNAME="USER" -e PASSWORD="PASS" etemptation_lunch_ticket
+docker run --rm -e USERNAME="USER" -e PASSWORD="PASS" harbor.ville-noumea.nc/infra/etemptation_lunch_ticket
 ```
 
 ### Execute on qualif
 ```bash
 # launch the script
-docker run --rm -e USERNAME="USER" -e PASSWORD="PASS" -e WEBSITE_URL="https://etemptation-qual.ville-noumea.nc" etemptation_lunch_ticket
+docker run --rm -e USERNAME="USER" -e PASSWORD="PASS" -e WEBSITE_URL="https://etemptation-qual.ville-noumea.nc" harbor.ville-noumea.nc/infra/etemptation_lunch_ticket
 ```
